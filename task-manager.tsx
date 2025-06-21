@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import socket from "@/hooks/use-socket"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Circle, Clock, CheckCircle2, Phone, Calendar, User, Trash2, ArrowRight } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Task {
   id: number
@@ -106,6 +108,25 @@ export default function TaskManager() {
         return <Phone className="h-3 w-3" />
     }
   }
+
+  useEffect(() => {
+      (window as any).socket = socket;
+      function handleNewTask(task) {
+          setTasks((prev) => [...prev, task]);
+      }
+
+      function handleNewCall(call) {
+          setCalls((prev) => [...prev, call]);
+      }
+
+      socket.on("new-task", handleNewTask);
+      socket.on("new-call", handleNewCall);
+
+      return () => {
+        socket.off("new-task", handleNewTask);
+        socket.off("new-call", handleNewCall);
+      };
+  }, []);
 
   const todoTasks = tasks.filter((task) => task.status === "todo")
   const progressTasks = tasks.filter((task) => task.status === "progress")
@@ -220,36 +241,43 @@ export default function TaskManager() {
                   </Button>
                 </div>
 
-                {/* Tasks */}
-                {todoTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/40 group hover:bg-slate-700/60 transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-slate-200 text-sm">{task.text}</span>
-                      <Button
-                        onClick={() => deleteTask(task.id)}
-                        size="sm"
-                        variant="ghost"
-                        className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-slate-400 hover:text-red-400"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>{task.priority}</Badge>
-                      <Button
-                        onClick={() => moveTask(task.id, "progress")}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-xs text-slate-400 hover:text-blue-400"
-                      >
-                        <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+
+                <AnimatePresence>
+                  {todoTasks.map((task) => (
+                    <motion.div
+                      key={task.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="p-4 bg-slate-700/40 rounded-lg border border-slate-600/40 group hover:bg-slate-700/60 transition-all">
+                        <div className="flex items-start justify-between mb-3">
+                          <span className="text-slate-200 text-sm">{task.text}</span>
+                          <Button
+                            onClick={() => deleteTask(task.id)}
+                            size="sm"
+                            variant="ghost"
+                            className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-slate-400 hover:text-red-400"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>{task.priority}</Badge>
+                          <Button
+                            onClick={() => moveTask(task.id, "progress")}
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs text-slate-400 hover:text-blue-400"
+                          >
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </CardContent>
             </Card>
 
